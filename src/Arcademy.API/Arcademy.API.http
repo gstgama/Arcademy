@@ -1,0 +1,6 @@
+@Arcademy.API_HostAddress = http://localhost:5160
+
+GET {{Arcademy.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

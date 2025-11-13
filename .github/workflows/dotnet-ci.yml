@@ -1,0 +1,40 @@
+# Name of your workflow
+name: Arcademy - .NET CI
+
+# Triggers: When this workflow will run
+on:
+  # Run on every push to any branch
+  push:
+    branches: ["**"]
+  # Also run on pull requests targeting the 'main' branch
+  pull_request:
+    branches: ["main"]
+
+# Jobs: The sequence of tasks to perform
+jobs:
+  build-and-test:
+    # Runner: The type of machine to run on (Ubuntu is cheapest and fastest)
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Check out the code from the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Set up the .NET 9 SDK
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x" # Using .NET 9 as you specified
+
+      # Step 3: Restore NuGet packages
+      - name: Restore dependencies
+        run: dotnet restore
+
+      # Step 4: Build the solution
+      - name: Build
+        run: dotnet build --no-restore
+
+      # Step 5: Run all tests in the solution
+      - name: Test
+        run: dotnet test --no-build --verbosity normal

@@ -53,3 +53,32 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:$LATEST_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$LATEST_TAG
+
+  deploy:
+    needs: build-and-push # Runs after the image is pushed
+    runs-on: ubuntu-latest
+    environment: api
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: sa-east-1 # Must be your EB region
+
+      - name: Deploy to Elastic Beanstalk
+        uses: einaregilsson/beanstalk-deploy@v21
+        with:
+          application_name: Arcademy # Your EB App Name
+          environment_name: arcademy-prod # Your EB Environment Name
+          region: sa-east-1 # Your EB Region
+          # This tells the action to ONLY deploy the Dockerrun file
+          # which instructs EB to pull the 'latest' image from ECR
+          version_label: ${{ github.sha }}
+          use_existing_version_if_available: false
+          existing_bucket_name: "" # Let the action handle the S3 bucket
+          deployment_package: Dockerrun.aws.json

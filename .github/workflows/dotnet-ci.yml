@@ -25,6 +25,7 @@ jobs:
   build-and-push:
     needs: test # Dependency!
     runs-on: ubuntu-latest
+    environment: api
     # Only run this step on the main branch (don't push images for PRs)
     if: github.ref == 'refs/heads/main'
 
@@ -34,8 +35,8 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.api.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.api.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: sa-east-1 # Or your preferred region (e.g., sa-east-1)
 
       - name: Login to Amazon ECR

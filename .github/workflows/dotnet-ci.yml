@@ -1,40 +1,54 @@
-# Name of your workflow
-name: Arcademy - .NET CI
+name: Arcademy - Build & Push
 
-# Triggers: When this workflow will run
 on:
-  # Run on every push to any branch
   push:
-    branches: ["**"]
-  # Also run on pull requests targeting the 'main' branch
+    branches: ["main"] # Only deploy on main merge
   pull_request:
-    branches: ["main"]
+    branches: ["main"] # Just run tests on PRs
 
-# Jobs: The sequence of tasks to perform
 jobs:
-  build-and-test:
-    # Runner: The type of machine to run on (Ubuntu is cheapest and fastest)
+  # JOB 1: TEST (Same as before)
+  test:
     runs-on: ubuntu-latest
-
     steps:
-      # Step 1: Check out the code from the repository
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      # Step 2: Set up the .NET 9 SDK
-      - name: Setup .NET 9
+      - uses: actions/checkout@v4
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "9.0.x" # Using .NET 9 as you specified
-
-      # Step 3: Restore NuGet packages
-      - name: Restore dependencies
+          dotnet-version: "9.0.x"
+      - name: Restore
         run: dotnet restore
-
-      # Step 4: Build the solution
-      - name: Build
-        run: dotnet build --no-restore
-
-      # Step 5: Run all tests in the solution
       - name: Test
-        run: dotnet test --no-build --verbosity normal
+        run: dotnet test --no-restore --verbosity normal
+
+  # JOB 2: BUILD & PUSH TO AWS (Runs only if Test passes)
+  build-and-push:
+    needs: test # Dependency!
+    runs-on: ubuntu-latest
+    # Only run this step on the main branch (don't push images for PRs)
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: sa-east-1 # Or your preferred region (e.g., sa-east-1)
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: arcademy-api
+          IMAGE_TAG: ${{ github.sha }} # Use the Git Commit Hash as the tag
+          LATEST_TAG: latest
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:$LATEST_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$LATEST_TAG

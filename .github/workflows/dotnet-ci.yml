@@ -46,7 +46,7 @@ jobs:
       - name: Build, tag, and push image to Amazon ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: arcademy-api
+          ECR_REPOSITORY: arcademy/api
           IMAGE_TAG: ${{ github.sha }} # Use the Git Commit Hash as the tag
           LATEST_TAG: latest
         run: |
